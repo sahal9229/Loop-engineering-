@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>NEON SNAKE — Premium Arcade</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="bg-glow"></div>
+<canvas id="bgParticles"></canvas>
+
+<div id="app">
+
+  <!-- ================= MAIN MENU ================= -->
+  <section id="menuScreen" class="screen active">
+    <div class="menu-panel glass">
+      <h1 class="game-title" data-text="NEON SNAKE">NEON SNAKE</h1>
+      <p class="subtitle">Premium Arcade Edition</p>
+
+      <div class="menu-body">
+        <div class="menu-col">
+          <h2 class="section-label">Difficulty</h2>
+          <div class="option-group" id="difficultyGroup" role="radiogroup">
+            <button class="option-btn active" data-difficulty="easy">Easy</button>
+            <button class="option-btn" data-difficulty="medium">Medium</button>
+            <button class="option-btn" data-difficulty="hard">Hard</button>
+            <button class="option-btn" data-difficulty="insane">Insane</button>
+          </div>
+
+          <h2 class="section-label">Game Mode</h2>
+          <div class="option-group" id="modeGroup" role="radiogroup">
+            <button class="option-btn active" data-mode="classic">Classic</button>
+            <button class="option-btn" data-mode="wrap">Wrap Around</button>
+          </div>
+        </div>
+
+        <div class="menu-col">
+          <h2 class="section-label">Settings</h2>
+          <div class="toggle-row">
+            <span>Sound</span>
+            <button class="toggle-btn active" id="soundToggle" aria-pressed="true">ON</button>
+          </div>
+          <div class="toggle-row">
+            <span>Music</span>
+            <button class="toggle-btn active" id="musicToggle" aria-pressed="true">ON</button>
+          </div>
+          <div class="toggle-row">
+            <span>Mobile Controls</span>
+            <button class="toggle-btn" id="mobileControlsToggle" aria-pressed="false">AUTO</button>
+          </div>
+
+          <h2 class="section-label">High Scores</h2>
+          <div class="stats-mini">
+            <div><span id="statHigh">0</span><small>High Score</small></div>
+            <div><span id="statGames">0</span><small>Games Played</small></div>
+            <div><span id="statLongest">0</span><small>Longest Snake</small></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="startBtn" class="cta-btn">
+        <span>START GAME</span>
+      </button>
+
+      <div class="controls-hint">
+        <span>Move: Arrow Keys / WASD</span>
+        <span>Pause: Space</span>
+        <span>Restart: R</span>
+        <span>Mute: M</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= GAME SCREEN ================= -->
+  <section id="gameScreen" class="screen">
+    <div id="hud" class="glass">
+      <div class="hud-group">
+        <div class="hud-item">
+          <label>Score</label>
+          <span id="hudScore">0</span>
+        </div>
+        <div class="hud-item">
+          <label>High Score</label>
+          <span id="hudHigh">0</span>
+        </div>
+      </div>
+      <div class="hud-group">
+        <div class="hud-item">
+          <label>Level</label>
+          <span id="hudLevel">1</span>
+        </div>
+        <div class="hud-item">
+          <label>Speed</label>
+          <span id="hudSpeed">0</span>
+        </div>
+        <div class="hud-item">
+          <label>Combo</label>
+          <span id="hudCombo">x1</span>
+        </div>
+      </div>
+      <div class="hud-group">
+        <div class="hud-item">
+          <label>Difficulty</label>
+          <span id="hudDifficulty">Easy</span>
+        </div>
+        <div class="hud-item">
+          <label>Mode</label>
+          <span id="hudMode">Classic</span>
+        </div>
+        <div class="hud-item">
+          <label>Time</label>
+          <span id="hudTime">00:00</span>
+        </div>
+      </div>
+      <div class="hud-group hud-powerup" id="hudPowerupGroup">
+        <div class="hud-item powerup-item" id="hudPowerupWrap" style="display:none;">
+          <label>Power-Up</label>
+          <span id="hudPowerupName">—</span>
+          <div class="powerup-bar-track"><div class="powerup-bar-fill" id="hudPowerupBar"></div></div>
+        </div>
+      </div>
+      <div class="hud-group hud-actions">
+        <button id="pauseBtn" class="icon-btn" title="Pause (Space)">❚❚</button>
+        <button id="muteBtn" class="icon-btn" title="Mute (M)">🔊</button>
+      </div>
+    </div>
+
+    <div id="canvasWrap">
+      <canvas id="gameCanvas"></canvas>
+      <div id="levelUpBanner" class="level-up-banner">LEVEL UP!</div>
+      <div id="floatingScoreLayer"></div>
+    </div>
+
+    <!-- Touch Controls -->
+    <div id="touchControls">
+      <div class="dpad">
+        <button class="dpad-btn dpad-up" data-dir="up">▲</button>
+        <button class="dpad-btn dpad-left" data-dir="left">◀</button>
+        <button class="dpad-btn dpad-down" data-dir="down">▼</button>
+        <button class="dpad-btn dpad-right" data-dir="right">▶</button>
+      </div>
+      <button id="touchPauseBtn" class="icon-btn touch-pause">❚❚</button>
+    </div>
+  </section>
+
+  <!-- ================= PAUSE OVERLAY ================= -->
+  <div id="pauseOverlay" class="overlay">
+    <div class="overlay-panel glass">
+      <h2>PAUSED</h2>
+      <button id="resumeBtn" class="cta-btn small">RESUME</button>
+      <button id="pauseRestartBtn" class="secondary-btn">RESTART</button>
+      <button id="pauseMenuBtn" class="secondary-btn">MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- ================= GAME OVER OVERLAY ================= -->
+  <div id="gameOverOverlay" class="overlay">
+    <div class="overlay-panel glass">
+      <h2 class="game-over-title">GAME OVER</h2>
+      <div class="final-stats">
+        <div class="final-stat"><label>Final Score</label><span id="finalScore">0</span></div>
+        <div class="final-stat"><label>High Score</label><span id="finalHigh">0</span></div>
+        <div class="final-stat"><label>Level Reached</label><span id="finalLevel">1</span></div>
+        <div class="final-stat"><label>Longest Combo</label><span id="finalCombo">x1</span></div>
+      </div>
+      <div id="newHighBadge" class="new-high-badge">NEW HIGH SCORE!</div>
+      <button id="playAgainBtn" class="cta-btn small">PLAY AGAIN</button>
+      <button id="gameOverMenuBtn" class="secondary-btn">MAIN MENU</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Snake</title>
+<style>
+  :root {
+    --cell: 24px;
+    --grid-size: 20;
+    --bg: #0a0e27;
+    --grid-line: #1a2540;
+    --snake: #00ff88;
+    --snake-head: #6bffc0;
+    --food: #ff006e;
+    --text: #e8ecf7;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', Courier, monospace;
+    color: var(--text);
+  }
+
+  .wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: 4px;
+    color: var(--snake);
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+  }
+
+  .hud {
+    display: flex;
+    gap: 24px;
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+
+  .hud span.value {
+    color: var(--food);
+    text-shadow: 0 0 6px rgba(255, 0, 110, 0.7);
+  }
+
+  .board-container {
+    position: relative;
+    width: calc(var(--cell) * var(--grid-size));
+    height: calc(var(--cell) * var(--grid-size));
+    background:
+      repeating-linear-gradient(to right, var(--grid-line) 0 1px, transparent 1px calc(var(--cell))),
+      repeating-linear-gradient(to bottom, var(--grid-line) 0 1px, transparent 1px calc(var(--cell))),
+      #060916;
+    border: 2px solid var(--grid-line);
+    border-radius: 6px;
+    box-shadow: 0 0 24px rgba(0, 255, 136, 0.08), inset 0 0 40px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+  }
+
+  .cell {
+    position: absolute;
+    width: var(--cell);
+    height: var(--cell);
+    top: 0;
+    left: 0;
+    transition: transform 120ms linear;
+    box-sizing: border-box;
+  }
+
+  .segment {
+    background: var(--snake);
+    border-radius: 4px;
+    box-shadow: 0 0 6px rgba(0, 255, 136, 0.8);
+  }
+
+  .segment.head {
+    background: var(--snake-head);
+    box-shadow: 0 0 10px rgba(107, 255, 192, 1);
+    z-index: 2;
+  }
+
+  .food {
+    background: var(--food);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 0, 110, 0.9), 0 0 20px rgba(255, 0, 110, 0.5);
+  }
+
+  .cell.food {
+    transition: none;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(6, 9, 22, 0.9);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    text-align: center;
+    z-index: 10;
+  }
+
+  .overlay.visible {
+    display: flex;
+  }
+
+  .overlay h2 {
+    margin: 0;
+    color: var(--food);
+    text-shadow: 0 0 10px rgba(255, 0, 110, 0.8);
+    letter-spacing: 3px;
+  }
+
+  .overlay p {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .overlay .final-score {
+    color: var(--snake);
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.7);
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 2px;
+    padding: 10px 20px;
+    background: transparent;
+    color: var(--snake);
+    border: 2px solid var(--snake);
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+    transition: background 150ms, color 150ms;
+  }
+
+  button:hover {
+    background: var(--snake);
+    color: #060916;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: #6b7aa8;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>NEON SNAKE</h1>
+    <div class="hud">
+      <div>SCORE: <span class="value" id="score">0</span></div>
+      <div>BEST: <span class="value" id="best">0</span></div>
+    </div>
+    <div class="board-container" id="board">
+      <div class="overlay" id="overlay">
+        <h2 id="overlay-title">GAME OVER</h2>
+        <p>Final Score: <span class="final-score" id="final-score">0</span></p>
+        <button id="play-again">PLAY AGAIN</button>
+      </div>
+    </div>
+    <div class="hint">Arrow keys or WASD to move</div>
+  </div>
+
+<script>
+(function () {
+  const GRID_SIZE = 20;
+  const TICK_MS = 120;
+
+  const board = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const finalScoreEl = document.getElementById('final-score');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const playAgainBtn = document.getElementById('play-again');
+
+  let best = Number(localStorage.getItem('neonSnakeBest') || 0);
+  bestEl.textContent = best;
+
+  let snake, direction, nextDirection, food, score, alive, loopHandle;
+  let segmentEls = [];
+  let foodEl = null;
+
+  function init() {
+    const mid = Math.floor(GRID_SIZE / 2);
+    snake = [
+      { x: mid - 1, y: mid },
+      { x: mid - 2, y: mid },
+      { x: mid - 3, y: mid }
+    ];
+    direction = { x: 1, y: 0 };
+    nextDirection = { x: 1, y: 0 };
+    score = 0;
+    alive = true;
+    scoreEl.textContent = score;
+    overlay.classList.remove('visible');
+
+    clearCells();
+    food = placeFood();
+    render();
+
+    if (loopHandle) clearInterval(loopHandle);
+    loopHandle = setInterval(tick, TICK_MS);
+  }
+
+  function clearCells() {
+    document.querySelectorAll('.cell').forEach(el => el.remove());
+    segmentEls = [];
+    foodEl = null;
+  }
+
+  function placeFood() {
+    const occupied = new Set(snake.map(s => s.x + ',' + s.y));
+    const free = [];
+    for (let x = 0; x < GRID_SIZE; x++) {
+      for (let y = 0; y < GRID_SIZE; y++) {
+        const key = x + ',' + y;
+        if (!occupied.has(key)) free.push({ x, y });
+      }
+    }
+    if (free.length === 0) return null;
+    return free[Math.floor(Math.random() * free.length)];
+  }
+
+  function tick() {
+    if (!alive) return;
+    direction = nextDirection;
+
+    const head = snake[0];
+    const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+    const willEat = !!(food && newHead.x === food.x && newHead.y === food.y);
+    // When not eating, the tail cell vacates this tick, so moving into it is legal.
+    const bodyToCheck = willEat ? snake : snake.slice(0, -1);
+
+    if (
+      newHead.x < 0 || newHead.x >= GRID_SIZE ||
+      newHead.y < 0 || newHead.y >= GRID_SIZE ||
+      bodyToCheck.some(seg => seg.x === newHead.x && seg.y === newHead.y)
+    ) {
+      gameOver();
+      return;
+    }
+
+    snake.unshift(newHead);
+
+    if (willEat) {
+      score++;
+      scoreEl.textContent = score;
+      food = placeFood();
+    } else {
+      snake.pop();
+    }
+
+    render();
+  }
+
+  function positionEl(el, pos) {
+    el.style.transform = `translate(${pos.x * 24}px, ${pos.y * 24}px)`;
+  }
+
+  function render() {
+    // Grow the segment pool with brand-new elements dropped directly into
+    // place (transition disabled for one frame) so a newly-grown tail never
+    // slides in from a stale position -- it just appears where it already is.
+    while (segmentEls.length < snake.length) {
+      const el = document.createElement('div');
+      el.className = 'cell segment';
+      el.style.transition = 'none';
+      board.appendChild(el);
+      positionEl(el, snake[segmentEls.length]);
+      void el.offsetWidth;
+      el.style.transition = '';
+      segmentEls.push(el);
+    }
+    while (segmentEls.length > snake.length) {
+      segmentEls.pop().remove();
+    }
+
+    for (let i = 0; i < snake.length; i++) {
+      const el = segmentEls[i];
+      el.classList.toggle('head', i === 0);
+      positionEl(el, snake[i]);
+    }
+
+    // Food gets its own persistent element (never repurposed as a snake
+    // segment) and never transitions -- it should appear at its new spot
+    // instantly, not glide across the board.
+    if (food) {
+      if (!foodEl) {
+        foodEl = document.createElement('div');
+        foodEl.className = 'cell food';
+        board.appendChild(foodEl);
+      }
+      positionEl(foodEl, food);
+    } else if (foodEl) {
+      foodEl.remove();
+      foodEl = null;
+    }
+  }
+
+  function gameOver() {
+    alive = false;
+    clearInterval(loopHandle);
+    if (score > best) {
+      best = score;
+      localStorage.setItem('neonSnakeBest', String(best));
+      bestEl.textContent = best;
+    }
+    finalScoreEl.textContent = score;
+    overlayTitle.textContent = 'GAME OVER';
+    overlay.classList.add('visible');
+  }
+
+  const KEY_MAP = {
+    ArrowUp: { x: 0, y: -1 }, w: { x: 0, y: -1 }, W: { x: 0, y: -1 },
+    ArrowDown: { x: 0, y: 1 }, s: { x: 0, y: 1 }, S: { x: 0, y: 1 },
+    ArrowLeft: { x: -1, y: 0 }, a: { x: -1, y: 0 }, A: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 }, d: { x: 1, y: 0 }, D: { x: 1, y: 0 }
+  };
+
+  window.addEventListener('keydown', (e) => {
+    const dir = KEY_MAP[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    if (!alive) return;
+    // Validate against the currently-applied `direction`, not the pending
+    // `nextDirection` -- `direction` only updates once per tick, so two
+    // keypresses queued within a single tick can no longer compound into a
+    // 180-degree reversal (e.g. Right -> Up -> Left all before the next tick).
+    if (dir.x === -direction.x && dir.y === -direction.y) return;
+    if (dir.x === direction.x && dir.y === direction.y) return;
+    nextDirection = dir;
+  });
+
+  playAgainBtn.addEventListener('click', init);
+
+  init();
+})();
+</script>
+</body>
+</html>
